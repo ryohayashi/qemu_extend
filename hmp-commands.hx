@@ -1493,16 +1493,16 @@ ETEXI
 
     {
         .name       = "balloon",
-        .args_type  = "value:M",
-        .params     = "target",
+        .args_type  = "value:M, node:M",
+        .params     = "target node",
         .help       = "request VM to change its memory allocation (in MB)",
         .cmd        = hmp_balloon,
     },
 
 STEXI
-@item balloon @var{value}
+@item balloon @var{value} on @var{node}
 @findex balloon
-Request VM to change its memory allocation to @var{value} (in MB).
+Request VM to change its memory allocation to @var{value} on node @var{node} (in MB).
 ETEXI
 
     {
