@@ -1322,9 +1322,10 @@ void hmp_block_passwd(Monitor *mon, const QDict *qdict)
 void hmp_balloon(Monitor *mon, const QDict *qdict)
 {
     int64_t value = qdict_get_int(qdict, "value");
+    int64_t node = qdict_get_int(qdict, "node");
     Error *err = NULL;
 
-    qmp_balloon(value, &err);
+    qmp_balloon(value, node, &err);
     hmp_handle_error(mon, &err);
 }
 

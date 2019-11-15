@@ -614,14 +614,14 @@ ETEXI
         .name       = "balloon",
         .args_type  = "",
         .params     = "",
-        .help       = "show balloon information",
+        .help       = "show balloon information on each node",
         .cmd        = hmp_info_balloon,
     },
 
 STEXI
-@item info balloon
+@item info balloon on each node.
 @findex info balloon
-Show balloon information.
+Show balloon information on each node.
 ETEXI
 
     {
