@@ -631,10 +631,11 @@ static void virtio_balloon_get_config(VirtIODevice *vdev, uint8_t *config_data)
 {
     VirtIOBalloon *dev = VIRTIO_BALLOON(vdev);
     struct virtio_balloon_config config = {};
-
-    config.num_pages = cpu_to_le32(dev->num_pages);
-    config.actual = cpu_to_le32(dev->actual);
-
+    int node;
+    for (node = 0; node < MAX_NODES; node++){
+        config.num_pages[node] = cpu_to_le32(dev->num_pages[node]);
+        config.actual[node] = cpu_to_le32(dev->actual[node]);
+    }
     if (dev->free_page_report_status == FREE_PAGE_REPORT_S_REQUESTED) {
         config.free_page_report_cmd_id =
                        cpu_to_le32(dev->free_page_report_cmd_id);
@@ -645,8 +646,8 @@ static void virtio_balloon_get_config(VirtIODevice *vdev, uint8_t *config_data)
         config.free_page_report_cmd_id =
                        cpu_to_le32(VIRTIO_BALLOON_CMD_ID_DONE);
     }
-
-    trace_virtio_balloon_get_config(config.num_pages, config.actual);
+    for (node = 0; node < MAX_NODES; node++) \
+        trace_virtio_balloon_get_config(config.num_pages[node], config.actual[node]);
     memcpy(config_data, &config, virtio_balloon_config_size(dev));
 }
 
@@ -713,8 +714,10 @@ static uint64_t virtio_balloon_get_features(VirtIODevice *vdev, uint64_t f,
 static void virtio_balloon_stat(void *opaque, BalloonInfo *info)
 {
     VirtIOBalloon *dev = opaque;
+    int node;
     //get_current_ram_size: total ram size of VM. dev->actual: ballooned ram size.
-    info->actual = get_current_ram_size() - ((uint64_t) dev->actual <<
+    for(node = 0; node < MAX_NODES; i++)
+        info->actual[node] = get_current_ram_size(node) - ((uint64_t) dev->actual[node] <<
                                              VIRTIO_BALLOON_PFN_SHIFT);
 }
 
@@ -729,12 +732,11 @@ static void virtio_balloon_to_target(void *opaque, ram_addr_t target, int64_t no
     }
     if (target) {
         //number of pages to be ballooned
-        dev->num_pages = (vm_ram_size - target) >> VIRTIO_BALLOON_PFN_SHIFT;
-        dev->node_id = node;
+        dev->num_pages[node] = (vm_ram_size - target) >> VIRTIO_BALLOON_PFN_SHIFT;
         //virtio_notify_config notifies guest the updated num_pages.
         virtio_notify_config(vdev);
     }
-    trace_virtio_balloon_to_target(target, dev->num_pages);
+    trace_virtio_balloon_to_target(target, dev->num_pages[node]);
 }
 
 static int virtio_balloon_post_load_device(void *opaque, int version_id)

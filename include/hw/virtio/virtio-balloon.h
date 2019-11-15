@@ -24,7 +24,7 @@
         OBJECT_CHECK(VirtIOBalloon, (obj), TYPE_VIRTIO_BALLOON)
 
 #define VIRTIO_BALLOON_FREE_PAGE_REPORT_CMD_ID_MIN 0x80000000
-
+#define MAX_NODES 8
 typedef struct virtio_balloon_stat VirtIOBalloonStat;
 
 typedef struct virtio_balloon_stat_modern {
@@ -44,9 +44,8 @@ typedef struct VirtIOBalloon {
     VirtIODevice parent_obj;
     VirtQueue *ivq, *dvq, *svq, *free_page_vq;
     uint32_t free_page_report_status;
-    uint32_t num_pages;
-    uint32_t actual;
-    uint32_t node_id;
+    uint32_t num_pages[MAX_NODES];
+    uint32_t actual[MAX_NODES];
     uint32_t free_page_report_cmd_id;
     uint64_t stats[VIRTIO_BALLOON_S_NR];
     VirtQueueElement *stats_vq_elem;
