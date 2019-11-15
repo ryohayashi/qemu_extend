@@ -107,7 +107,7 @@ BalloonInfo *qmp_query_balloon(Error **errp)
     return info;
 }
 
-void qmp_balloon(int64_t target, Error **errp)
+void qmp_balloon(int64_t target, int64_t node, Error **errp)
 {
     if (!have_balloon(errp)) {
         return;
@@ -119,5 +119,5 @@ void qmp_balloon(int64_t target, Error **errp)
     }
 
     trace_balloon_event(balloon_opaque, target);
-    balloon_event_fn(balloon_opaque, target);
+    balloon_event_fn(balloon_opaque, target, node);
 }

@@ -713,21 +713,25 @@ static uint64_t virtio_balloon_get_features(VirtIODevice *vdev, uint64_t f,
 static void virtio_balloon_stat(void *opaque, BalloonInfo *info)
 {
     VirtIOBalloon *dev = opaque;
+    //get_current_ram_size: total ram size of VM. dev->actual: ballooned ram size.
     info->actual = get_current_ram_size() - ((uint64_t) dev->actual <<
                                              VIRTIO_BALLOON_PFN_SHIFT);
 }
 
-static void virtio_balloon_to_target(void *opaque, ram_addr_t target)
+static void virtio_balloon_to_target(void *opaque, ram_addr_t target, int64_t node)
 {
     VirtIOBalloon *dev = VIRTIO_BALLOON(opaque);
     VirtIODevice *vdev = VIRTIO_DEVICE(dev);
-    ram_addr_t vm_ram_size = get_current_ram_size();
+    ram_addr_t vm_ram_size = get_current_ram_size(node);
 
     if (target > vm_ram_size) {
         target = vm_ram_size;
     }
     if (target) {
+        //number of pages to be ballooned
         dev->num_pages = (vm_ram_size - target) >> VIRTIO_BALLOON_PFN_SHIFT;
+        dev->node_id = node;
+        //virtio_notify_config notifies guest the updated num_pages.
         virtio_notify_config(vdev);
     }
     trace_virtio_balloon_to_target(target, dev->num_pages);
