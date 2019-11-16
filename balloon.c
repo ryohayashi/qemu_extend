@@ -101,7 +101,7 @@ BalloonInfo *qmp_query_balloon(Error **errp)
     if (!have_balloon(errp)) {
         return NULL;
     }
-
+    //TODO: Might not work. how to specify array size?
     info = g_malloc0(sizeof(*info));
     balloon_stat_fn(balloon_opaque, info);
     return info;

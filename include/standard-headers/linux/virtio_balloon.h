@@ -53,6 +53,19 @@ struct virtio_balloon_config {
 	uint32_t poison_val;
 };
 
+#define MAX_NODES 8
+struct virtio_balloon_config_new {
+	/* Number of pages host wants Guest to give up. */
+	uint32_t num_pages[MAX_NODES];
+	/* Number of pages we've actually got in balloon. */
+	uint32_t actual[MAX_NODES];
+	/* Free page report command id, readonly by guest */
+	uint32_t free_page_report_cmd_id;
+	/* Stores PAGE_POISON if page poisoning is in use */
+	uint32_t poison_val;
+};
+
+
 #define VIRTIO_BALLOON_S_SWAP_IN  0   /* Amount of memory swapped in */
 #define VIRTIO_BALLOON_S_SWAP_OUT 1   /* Amount of memory swapped out */
 #define VIRTIO_BALLOON_S_MAJFLT   2   /* Number of major faults */

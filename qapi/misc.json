@@ -411,7 +411,7 @@
 # Since: 0.14.0
 #
 ##
-{ 'struct': 'BalloonInfo', 'data': {'actual': 'int' } }
+{ 'struct': 'BalloonInfo', 'data': {'actual': ['int' ]} }
 
 ##
 # @query-balloon:
@@ -1009,7 +1009,7 @@
 # <- { "return": {} }
 #
 ##
-{ 'command': 'balloon', 'data': {'value': 'int'} }
+{ 'command': 'balloon', 'data': {'value': 'int', 'node': 'int'} }
 
 ##
 # @human-monitor-command:

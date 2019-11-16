@@ -627,10 +627,26 @@ static size_t virtio_balloon_config_size(VirtIOBalloon *s)
     return offsetof(struct virtio_balloon_config, free_page_report_cmd_id);
 }
 
+static size_t virtio_balloon_config_new_size(VirtIOBalloon *s)
+{
+    uint64_t features = s->host_features;
+
+    if (s->qemu_4_0_config_size) {
+        return sizeof(struct virtio_balloon_config_new);
+    }
+    if (virtio_has_feature(features, VIRTIO_BALLOON_F_PAGE_POISON)) {
+        return sizeof(struct virtio_balloon_config_new);
+    }
+    if (virtio_has_feature(features, VIRTIO_BALLOON_F_FREE_PAGE_HINT)) {
+        return offsetof(struct virtio_balloon_config_new, poison_val);
+    }
+    return offsetof(struct virtio_balloon_config_new, free_page_report_cmd_id);
+}
+
 static void virtio_balloon_get_config(VirtIODevice *vdev, uint8_t *config_data)
 {
     VirtIOBalloon *dev = VIRTIO_BALLOON(vdev);
-    struct virtio_balloon_config config = {};
+    struct virtio_balloon_config_new config = {};
     int node;
     for (node = 0; node < MAX_NODES; node++){
         config.num_pages[node] = cpu_to_le32(dev->num_pages[node]);
@@ -648,7 +664,7 @@ static void virtio_balloon_get_config(VirtIODevice *vdev, uint8_t *config_data)
     }
     for (node = 0; node < MAX_NODES; node++) \
         trace_virtio_balloon_get_config(config.num_pages[node], config.actual[node]);
-    memcpy(config_data, &config, virtio_balloon_config_size(dev));
+    memcpy(config_data, &config, virtio_balloon_config_new_size(dev));
 }
 
 static int build_dimm_list(Object *obj, void *opaque)
@@ -666,39 +682,50 @@ static int build_dimm_list(Object *obj, void *opaque)
     return 0;
 }
 
-static ram_addr_t get_current_ram_size(void)
+static ram_addr_t get_current_ram_size(int node)
 {
     GSList *list = NULL, *item;
-    ram_addr_t size = ram_size;
+    MachineState *ms = MACHINE(qdev_get_machine());
+    int is_numa = (ms->numa_state == NULL ||
+        ms->numa_state->num_nodes == 0 || !have_memdevs);
+    ram_addr_t size = is_numa ? ms->numa_state->nodes[node].node_mem : ram_size;
 
     build_dimm_list(qdev_get_machine(), &list);
     for (item = list; item; item = g_slist_next(item)) {
         Object *obj = OBJECT(item->data);
         if (!strcmp(object_get_typename(obj), TYPE_PC_DIMM)) {
+            if(!is_numa || (is_numa && node == object_property_get_int(obj, 
+                                        PC_DIMM_NODE_PROP, &error_abort) ))
             size += object_property_get_int(obj, PC_DIMM_SIZE_PROP,
                                             &error_abort);
         }
     }
     g_slist_free(list);
+    //if VM is not NUMA machine, then memory size of nodes excluding node0 is set 0.
+    if (!is_numa && node != 0) size = 0;
 
     return size;
 }
+
 
 static void virtio_balloon_set_config(VirtIODevice *vdev,
                                       const uint8_t *config_data)
 {
     VirtIOBalloon *dev = VIRTIO_BALLOON(vdev);
-    struct virtio_balloon_config config;
-    uint32_t oldactual = dev->actual;
-    ram_addr_t vm_ram_size = get_current_ram_size();
-
-    memcpy(&config, config_data, virtio_balloon_config_size(dev));
-    dev->actual = le32_to_cpu(config.actual);
-    if (dev->actual != oldactual) {
-        qapi_event_send_balloon_change(vm_ram_size -
-                        ((ram_addr_t) dev->actual << VIRTIO_BALLOON_PFN_SHIFT));
+    struct virtio_balloon_config_new config;
+    int node;
+    uint32_t oldactual[MAX_NODES];
+    memcpy(&config, config_data, virtio_balloon_config_new_size(dev));
+    for (node = 0; node < MAX_NODES; node++){
+        oldactual[node] = dev->actual[node];
+        ram_addr_t vm_ram_size = get_current_ram_size(node);
+        dev->actual[node] = le32_to_cpu(config.actual[node]);
+        if (dev->actual[node] != oldactual[node]) {
+            qapi_event_send_balloon_change(vm_ram_size -
+                            ((ram_addr_t) dev->actual[node] << VIRTIO_BALLOON_PFN_SHIFT));
+        }
+        trace_virtio_balloon_set_config(dev->actual[node], oldactual[node]);
     }
-    trace_virtio_balloon_set_config(dev->actual, oldactual);
 }
 
 static uint64_t virtio_balloon_get_features(VirtIODevice *vdev, uint64_t f,
@@ -767,8 +794,8 @@ static const VMStateDescription vmstate_virtio_balloon_device = {
     .minimum_version_id = 1,
     .post_load = virtio_balloon_post_load_device,
     .fields = (VMStateField[]) {
-        VMSTATE_UINT32(num_pages, VirtIOBalloon),
-        VMSTATE_UINT32(actual, VirtIOBalloon),
+        VMSTATE_UINT32_ARRAY(num_pages, VirtIOBalloon, MAX_NODES),
+        VMSTATE_UINT32_ARRAY(actual, VirtIOBalloon, MAX_NODES),
         VMSTATE_END_OF_LIST()
     },
     .subsections = (const VMStateDescription * []) {
@@ -784,7 +811,7 @@ static void virtio_balloon_device_realize(DeviceState *dev, Error **errp)
     int ret;
 
     virtio_init(vdev, "virtio-balloon", VIRTIO_ID_BALLOON,
-                virtio_balloon_config_size(s));
+                virtio_balloon_config_new_size(s));
 
     ret = qemu_add_balloon_handler(virtio_balloon_to_target,
                                    virtio_balloon_stat, s);

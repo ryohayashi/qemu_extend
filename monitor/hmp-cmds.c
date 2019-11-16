@@ -856,7 +856,7 @@ void hmp_info_balloon(Monitor *mon, const QDict *qdict)
         return;
     }
     for (node = 0; node < MAX_NODES; node++){
-        monitor_printf(mon, "balloon: actual[%d]=%" PRId64 "\n", node, info->actual[node] >> 20);
+        monitor_printf(mon, "balloon: actual[%" PRId64 "]=%" PRId64 "\n", node, info->actual[node] >> 20);
     }
     qapi_free_BalloonInfo(info);
 }
