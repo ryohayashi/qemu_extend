@@ -843,20 +843,20 @@ out:
 }
 #endif
 
-#define MAX_NODES 8
-
 void hmp_info_balloon(Monitor *mon, const QDict *qdict)
 {
     BalloonInfo *info;
     Error *err = NULL;
-    int node;
+    int node = 0;
+    intList *list;
     info = qmp_query_balloon(&err);
     if (err) {
         hmp_handle_error(mon, &err);
         return;
     }
-    for (node = 0; node < MAX_NODES; node++){
-        monitor_printf(mon, "balloon: actual[%" PRId64 "]=%" PRId64 "\n", node, info->actual[node] >> 20);
+    for (list = info->actual; list != NULL; list = list->next){
+        monitor_printf(mon, "balloon: actual[%" PRId32 "]=%" PRId64 "\n", node, list->value >> 20);
+        node++;
     }
     qapi_free_BalloonInfo(info);
 }

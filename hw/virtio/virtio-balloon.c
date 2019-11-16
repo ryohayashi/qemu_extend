@@ -29,6 +29,8 @@
 #include "trace.h"
 #include "qemu/error-report.h"
 #include "migration/misc.h"
+#include "hw/boards.h"
+#include "sysemu/numa.h"
 
 #include "hw/virtio/virtio-bus.h"
 #include "hw/virtio/virtio-access.h"
@@ -610,7 +612,7 @@ virtio_balloon_free_page_report_notify(NotifierWithReturn *n, void *data)
 
     return 0;
 }
-
+/*
 static size_t virtio_balloon_config_size(VirtIOBalloon *s)
 {
     uint64_t features = s->host_features;
@@ -626,7 +628,7 @@ static size_t virtio_balloon_config_size(VirtIOBalloon *s)
     }
     return offsetof(struct virtio_balloon_config, free_page_report_cmd_id);
 }
-
+*/
 static size_t virtio_balloon_config_new_size(VirtIOBalloon *s)
 {
     uint64_t features = s->host_features;
@@ -648,7 +650,7 @@ static void virtio_balloon_get_config(VirtIODevice *vdev, uint8_t *config_data)
     VirtIOBalloon *dev = VIRTIO_BALLOON(vdev);
     struct virtio_balloon_config_new config = {};
     int node;
-    for (node = 0; node < MAX_NODES; node++){
+    for (node = 0; node < MAX_NODES_EX; node++){
         config.num_pages[node] = cpu_to_le32(dev->num_pages[node]);
         config.actual[node] = cpu_to_le32(dev->actual[node]);
     }
@@ -662,7 +664,7 @@ static void virtio_balloon_get_config(VirtIODevice *vdev, uint8_t *config_data)
         config.free_page_report_cmd_id =
                        cpu_to_le32(VIRTIO_BALLOON_CMD_ID_DONE);
     }
-    for (node = 0; node < MAX_NODES; node++) \
+    for (node = 0; node < MAX_NODES_EX; node++) \
         trace_virtio_balloon_get_config(config.num_pages[node], config.actual[node]);
     memcpy(config_data, &config, virtio_balloon_config_new_size(dev));
 }
@@ -686,8 +688,7 @@ static ram_addr_t get_current_ram_size(int node)
 {
     GSList *list = NULL, *item;
     MachineState *ms = MACHINE(qdev_get_machine());
-    int is_numa = (ms->numa_state == NULL ||
-        ms->numa_state->num_nodes == 0 || !have_memdevs);
+    int is_numa = (ms->numa_state == NULL || ms->numa_state->num_nodes == 0 );
     ram_addr_t size = is_numa ? ms->numa_state->nodes[node].node_mem : ram_size;
 
     build_dimm_list(qdev_get_machine(), &list);
@@ -714,9 +715,9 @@ static void virtio_balloon_set_config(VirtIODevice *vdev,
     VirtIOBalloon *dev = VIRTIO_BALLOON(vdev);
     struct virtio_balloon_config_new config;
     int node;
-    uint32_t oldactual[MAX_NODES];
+    uint32_t oldactual[MAX_NODES_EX];
     memcpy(&config, config_data, virtio_balloon_config_new_size(dev));
-    for (node = 0; node < MAX_NODES; node++){
+    for (node = 0; node < MAX_NODES_EX; node++){
         oldactual[node] = dev->actual[node];
         ram_addr_t vm_ram_size = get_current_ram_size(node);
         dev->actual[node] = le32_to_cpu(config.actual[node]);
@@ -741,14 +742,20 @@ static uint64_t virtio_balloon_get_features(VirtIODevice *vdev, uint64_t f,
 static void virtio_balloon_stat(void *opaque, BalloonInfo *info)
 {
     VirtIOBalloon *dev = opaque;
+    intList *list, *entry;
     int node;
     //get_current_ram_size: total ram size of VM. dev->actual: ballooned ram size.
-    for(node = 0; node < MAX_NODES; i++)
-        info->actual[node] = get_current_ram_size(node) - ((uint64_t) dev->actual[node] <<
+    for(node = MAX_NODES_EX - 1; node >= 0; node--){
+        entry = g_malloc0(sizeof(*entry));
+        entry->value = get_current_ram_size(node) - ((uint64_t) dev->actual[node] <<
                                              VIRTIO_BALLOON_PFN_SHIFT);
+        entry->next = list;
+        list = entry;
+    }
+    info->actual = list;
 }
 
-static void virtio_balloon_to_target(void *opaque, ram_addr_t target, int64_t node)
+static void virtio_balloon_to_target(void *opaque, ram_addr_t target, int node)
 {
     VirtIOBalloon *dev = VIRTIO_BALLOON(opaque);
     VirtIODevice *vdev = VIRTIO_DEVICE(dev);
@@ -794,8 +801,8 @@ static const VMStateDescription vmstate_virtio_balloon_device = {
     .minimum_version_id = 1,
     .post_load = virtio_balloon_post_load_device,
     .fields = (VMStateField[]) {
-        VMSTATE_UINT32_ARRAY(num_pages, VirtIOBalloon, MAX_NODES),
-        VMSTATE_UINT32_ARRAY(actual, VirtIOBalloon, MAX_NODES),
+        VMSTATE_UINT32_ARRAY(num_pages, VirtIOBalloon, MAX_NODES_EX),
+        VMSTATE_UINT32_ARRAY(actual, VirtIOBalloon, MAX_NODES_EX),
         VMSTATE_END_OF_LIST()
     },
     .subsections = (const VMStateDescription * []) {

@@ -411,7 +411,7 @@
 # Since: 0.14.0
 #
 ##
-{ 'struct': 'BalloonInfo', 'data': {'actual': ['int' ]} }
+{ 'struct': 'BalloonInfo', 'data': {'actual': ['int'] } }
 
 ##
 # @query-balloon:
