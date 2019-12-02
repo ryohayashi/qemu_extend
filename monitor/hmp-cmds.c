@@ -860,7 +860,7 @@ void hmp_info_balloon(Monitor *mon, const QDict *qdict)
 
 void hmp_info_nballoon(Monitor *mon, const QDict *qdict)
 {
-    BalloonInfo *info;
+    NBalloonInfo *info;
     Error *err = NULL;
     int node = 0;
     intList *list;
@@ -873,7 +873,7 @@ void hmp_info_nballoon(Monitor *mon, const QDict *qdict)
         monitor_printf(mon, "balloon: actual[%" PRId32 "]=%" PRId64 "\n", node, list->value >> 20);
         node++;
     }
-    qapi_free_BalloonInfo(info);
+    qapi_free_NBalloonInfo(info);
 }
 
 static void hmp_info_pci_device(Monitor *mon, const PciDeviceInfo *dev)
