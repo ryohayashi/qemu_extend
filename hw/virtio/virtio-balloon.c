@@ -647,12 +647,14 @@ static size_t virtio_balloon_config_new_size(VirtIOBalloon *s)
 
 static void virtio_balloon_get_config(VirtIODevice *vdev, uint8_t *config_data)
 {
+    printf("Start of virtio_balloon_get_config\n");
     VirtIOBalloon *dev = VIRTIO_BALLOON(vdev);
     struct virtio_balloon_config_new config = {};
     int node;
     for (node = 0; node < MAX_NODES_EX; node++){
         config.num_pages[node] = cpu_to_le32(dev->num_pages[node]);
         config.actual[node] = cpu_to_le32(dev->actual[node]);
+        printf("config.num_pages[%d]: %d, config.actual[%d]: %d\n", config.num_pages[node], node, config.actual[node], node);
     }
     if (dev->free_page_report_status == FREE_PAGE_REPORT_S_REQUESTED) {
         config.free_page_report_cmd_id =
@@ -667,6 +669,7 @@ static void virtio_balloon_get_config(VirtIODevice *vdev, uint8_t *config_data)
     for (node = 0; node < MAX_NODES_EX; node++) \
         trace_virtio_balloon_get_config(config.num_pages[node], config.actual[node]);
     memcpy(config_data, &config, virtio_balloon_config_new_size(dev));
+    printf("End of virtio_balloon_get_config\n");
 }
 
 static int build_dimm_list(Object *obj, void *opaque)
@@ -688,7 +691,7 @@ static ram_addr_t get_current_ram_size(int node)
 {
     GSList *list = NULL, *item;
     MachineState *ms = MACHINE(qdev_get_machine());
-    int is_numa = (ms->numa_state == NULL || ms->numa_state->num_nodes == 0 );
+    int is_numa = !(ms->numa_state == NULL || ms->numa_state->num_nodes == 0 );
     ram_addr_t size = is_numa ? ms->numa_state->nodes[node].node_mem : ram_size;
 
     build_dimm_list(qdev_get_machine(), &list);
@@ -712,6 +715,7 @@ static ram_addr_t get_current_ram_size(int node)
 static void virtio_balloon_set_config(VirtIODevice *vdev,
                                       const uint8_t *config_data)
 {
+    printf("Start of virtio_balloon_set_config\n");
     VirtIOBalloon *dev = VIRTIO_BALLOON(vdev);
     struct virtio_balloon_config_new config;
     int node;
@@ -727,6 +731,7 @@ static void virtio_balloon_set_config(VirtIODevice *vdev,
         }
         trace_virtio_balloon_set_config(dev->actual[node], oldactual[node]);
     }
+    printf("End of virtio_balloon_set_config\n");
 }
 
 static uint64_t virtio_balloon_get_features(VirtIODevice *vdev, uint64_t f,
@@ -742,18 +747,22 @@ static uint64_t virtio_balloon_get_features(VirtIODevice *vdev, uint64_t f,
 static void virtio_balloon_stat(void *opaque, BalloonInfo *info)
 {
     VirtIOBalloon *dev = opaque;
-    info->actual = get_current_ram_size(0) - ((uint64_t) dev->actual[0] <<
-                                             VIRTIO_BALLOON_PFN_SHIFT);
+    int node;
+    info->actual = 0;
+    for(node = MAX_NODES_EX - 1; node >= 0; node--){
+        info->actual += (get_current_ram_size(node) - ((uint64_t) dev->actual[node] <<
+                                                 VIRTIO_BALLOON_PFN_SHIFT));
+    }
 }
 
 static void virtio_nballoon_stat(void *opaque, NBalloonInfo *info)
 {
     VirtIOBalloon *dev = opaque;
-    intList *list, *entry;
+    intList *list = NULL, *entry;
     int node;
     //get_current_ram_size: total ram size of VM. dev->actual: ballooned ram size.
     for(node = MAX_NODES_EX - 1; node >= 0; node--){
-        entry = g_malloc0(sizeof(*entry));
+        entry = g_malloc0(sizeof(*intList));
         entry->value = get_current_ram_size(node) - ((uint64_t) dev->actual[node] <<
                                              VIRTIO_BALLOON_PFN_SHIFT);
         entry->next = list;
