@@ -401,6 +401,7 @@
 { 'command': 'query-iothreads', 'returns': ['IOThreadInfo'],
   'allow-preconfig': true }
 
+
 ##
 # @BalloonInfo:
 #
@@ -411,7 +412,20 @@
 # Since: 0.14.0
 #
 ##
-{ 'struct': 'BalloonInfo', 'data': {'actual': ['int'] } }
+{ 'struct': 'BalloonInfo', 'data': {'actual': 'int'} }
+
+##
+# @NBalloonInfo:
+#
+# Information about the guest balloon device.
+#
+# @actual: the number of bytes the balloon currently contains
+#
+# Since: 0.14.0
+#
+##
+{ 'struct': 'NBalloonInfo', 'data': {'actual': ['int'] } }
+
 
 ##
 # @query-balloon:
@@ -438,6 +452,30 @@
 ##
 { 'command': 'query-balloon', 'returns': 'BalloonInfo' }
 
+##
+# @query-nballoon:
+#
+# Return information about the balloon device.
+#
+# Returns: @BalloonInfo on success
+#
+#          If the balloon driver is enabled but not functional because the KVM
+#          kernel module cannot support it, KvmMissingCap
+#
+#          If no balloon device is present, DeviceNotActive
+#
+# Since: 0.14.0
+#
+# Example:
+#
+# -> { "execute": "query-balloon" }
+# <- { "return": {
+#          "actual": 1073741824,
+#       }
+#    }
+#
+##
+{ 'command': 'query-nballoon', 'returns': 'NBalloonInfo' }
 ##
 # @BALLOON_CHANGE:
 #

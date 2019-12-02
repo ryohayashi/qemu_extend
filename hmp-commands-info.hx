@@ -619,6 +619,20 @@ ETEXI
     },
 
 STEXI
+@item info balloon.
+@findex info balloon
+Show balloon information.
+ETEXI
+
+    {
+        .name       = "nballoon",
+        .args_type  = "",
+        .params     = "",
+        .help       = "show balloon information on each node",
+        .cmd        = hmp_info_nballoon,
+    },
+
+STEXI
 @item info balloon on each node.
 @findex info balloon
 Show balloon information on each node.

@@ -742,6 +742,13 @@ static uint64_t virtio_balloon_get_features(VirtIODevice *vdev, uint64_t f,
 static void virtio_balloon_stat(void *opaque, BalloonInfo *info)
 {
     VirtIOBalloon *dev = opaque;
+    info->actual = get_current_ram_size() - ((uint64_t) dev->actual <<
+                                             VIRTIO_BALLOON_PFN_SHIFT);
+}
+
+static void virtio_nballoon_stat(void *opaque, NBalloonInfo *info)
+{
+    VirtIOBalloon *dev = opaque;
     intList *list, *entry;
     int node;
     //get_current_ram_size: total ram size of VM. dev->actual: ballooned ram size.
@@ -755,7 +762,29 @@ static void virtio_balloon_stat(void *opaque, BalloonInfo *info)
     info->actual = list;
 }
 
-static void virtio_balloon_to_target(void *opaque, ram_addr_t target, int node)
+static void virtio_balloon_to_target(void *opaque, ram_addr_t target)
+{
+    VirtIOBalloon *dev = VIRTIO_BALLOON(opaque);
+    VirtIODevice *vdev = VIRTIO_DEVICE(dev);
+    int node;
+    ram_addr_t target_temp;
+    ram_addr_t target_sum = target;
+    for(node = 0; node < MAX_NODES_EX; node++){
+        target_temp = target_sum;
+        ram_addr_t vm_ram_size = get_current_ram_size(node);
+        if (target_temp > vm_ram_size) {
+            target_temp = vm_ram_size;
+        }
+        if (target_temp) {
+            dev->num_pages[node] = (vm_ram_size - target_temp) >> VIRTIO_BALLOON_PFN_SHIFT;
+            target_sum -= target_temp;
+        }
+    }
+    virtio_notify_config(vdev);
+    trace_virtio_balloon_to_target(target, dev->num_pages[0]);
+}
+
+static void virtio_nballoon_to_target(void *opaque, ram_addr_t target, int node)
 {
     VirtIOBalloon *dev = VIRTIO_BALLOON(opaque);
     VirtIODevice *vdev = VIRTIO_DEVICE(dev);
@@ -820,8 +849,8 @@ static void virtio_balloon_device_realize(DeviceState *dev, Error **errp)
     virtio_init(vdev, "virtio-balloon", VIRTIO_ID_BALLOON,
                 virtio_balloon_config_new_size(s));
 
-    ret = qemu_add_balloon_handler(virtio_balloon_to_target,
-                                   virtio_balloon_stat, s);
+    ret = qemu_add_balloon_handler(virtio_balloon_to_target, virtio_nballoon_to_target,
+                                   virtio_balloon_stat, virtio_nballoon_stat, s);
 
     if (ret < 0) {
         error_setg(errp, "Only one balloon device is supported");

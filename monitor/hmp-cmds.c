@@ -842,14 +842,29 @@ out:
     qapi_free_SpiceInfo(info);
 }
 #endif
-
 void hmp_info_balloon(Monitor *mon, const QDict *qdict)
+{
+    BalloonInfo *info;
+    Error *err = NULL;
+
+    info = qmp_query_balloon(&err);
+    if (err) {
+        hmp_handle_error(mon, &err);
+        return;
+    }
+
+    monitor_printf(mon, "balloon: actual=%" PRId64 "\n", info->actual >> 20);
+
+    qapi_free_BalloonInfo(info);
+}
+
+void hmp_info_nballoon(Monitor *mon, const QDict *qdict)
 {
     BalloonInfo *info;
     Error *err = NULL;
     int node = 0;
     intList *list;
-    info = qmp_query_balloon(&err);
+    info = qmp_query_nballoon(&err);
     if (err) {
         hmp_handle_error(mon, &err);
         return;
@@ -1324,10 +1339,19 @@ void hmp_block_passwd(Monitor *mon, const QDict *qdict)
 void hmp_balloon(Monitor *mon, const QDict *qdict)
 {
     int64_t value = qdict_get_int(qdict, "value");
+    Error *err = NULL;
+
+    qmp_balloon(value, &err);
+    hmp_handle_error(mon, &err);
+}
+
+void hmp_nballoon(Monitor *mon, const QDict *qdict)
+{
+    int64_t value = qdict_get_int(qdict, "value");
     int64_t node = qdict_get_int(qdict, "node");
     Error *err = NULL;
 
-    qmp_balloon(value, node, &err);
+    qmp_nballoon(value, node, &err);
     hmp_handle_error(mon, &err);
 }
 

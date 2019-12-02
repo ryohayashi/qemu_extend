@@ -17,11 +17,14 @@
 #include "exec/cpu-common.h"
 #include "qapi/qapi-types-misc.h"
 
-typedef void (QEMUBalloonEvent)(void *opaque, ram_addr_t target, int node);
+typedef void (QEMUBalloonEvent)(void *opaque, ram_addr_t target);
+typedef void (QEMUBalloonNEvent)(void *opaque, ram_addr_t target, int node);
 typedef void (QEMUBalloonStatus)(void *opaque, BalloonInfo *info);
+typedef void (QEMUNBalloonStatus)(void *opaque, NBalloonInfo *info);
 
-int qemu_add_balloon_handler(QEMUBalloonEvent *event_func,
-                             QEMUBalloonStatus *stat_func, void *opaque);
+int qemu_add_balloon_handler(QEMUBalloonEvent *event_func, QEMUBalloonNEvent *nevent_func,
+                             QEMUBalloonStatus *stat_func, QEMUNBalloonStatus *nstat_func, 
+                             void *opaque);
 void qemu_remove_balloon_handler(void *opaque);
 bool qemu_balloon_is_inhibited(void);
 void qemu_balloon_inhibit(bool state);

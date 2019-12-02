@@ -34,7 +34,9 @@
 #include "qapi/qmp/qerror.h"
 
 static QEMUBalloonEvent *balloon_event_fn;
+static QEMUNBalloonEvent *nballoon_event_fn;
 static QEMUBalloonStatus *balloon_stat_fn;
+static QEMUNBalloonStatus *nballoon_stat_fn;
 static void *balloon_opaque;
 static int balloon_inhibit_count;
 
@@ -69,8 +71,9 @@ static bool have_balloon(Error **errp)
     return true;
 }
 
-int qemu_add_balloon_handler(QEMUBalloonEvent *event_func,
-                             QEMUBalloonStatus *stat_func, void *opaque)
+int qemu_add_balloon_handler(QEMUBalloonEvent *event_func, QEMUNBalloonEvent *nevent_func,
+                             QEMUBalloonStatus *stat_func, QEMUNBalloonStatus *nstat_func, 
+                             void *opaque)
 {
     if (balloon_event_fn || balloon_stat_fn || balloon_opaque) {
         /* We're already registered one balloon handler.  How many can
@@ -79,7 +82,9 @@ int qemu_add_balloon_handler(QEMUBalloonEvent *event_func,
         return -1;
     }
     balloon_event_fn = event_func;
+    nballoon_event_fn = nevent_func;
     balloon_stat_fn = stat_func;
+    nballoon_stat_fn = nstat_func;
     balloon_opaque = opaque;
     return 0;
 }
@@ -90,7 +95,9 @@ void qemu_remove_balloon_handler(void *opaque)
         return;
     }
     balloon_event_fn = NULL;
+    nballoon_event_fn = NULL;
     balloon_stat_fn = NULL;
+    nballoon_stat_fn = NULL;
     balloon_opaque = NULL;
 }
 
@@ -107,7 +114,21 @@ BalloonInfo *qmp_query_balloon(Error **errp)
     return info;
 }
 
-void qmp_balloon(int64_t target, int64_t node, Error **errp)
+NBalloonInfo *qmp_query_nballoon(Error **errp)
+{
+    NBalloonInfo *info;
+
+    if (!have_balloon(errp)) {
+        return NULL;
+    }
+    //TODO: Might not work. how to specify array size?
+    info = g_malloc0(sizeof(*info));
+    nballoon_stat_fn(balloon_opaque, info);
+    return info;
+}
+
+
+void qmp_balloon(int64_t target, Error **errp)
 {
     if (!have_balloon(errp)) {
         return;
@@ -119,5 +140,21 @@ void qmp_balloon(int64_t target, int64_t node, Error **errp)
     }
 
     trace_balloon_event(balloon_opaque, target);
-    balloon_event_fn(balloon_opaque, target, node);
+    balloon_event_fn(balloon_opaque, target);
+}
+
+
+void qmp_nballoon(int64_t target, int64_t node, Error **errp)
+{
+    if (!have_balloon(errp)) {
+        return;
+    }
+
+    if (target <= 0) {
+        error_setg(errp, QERR_INVALID_PARAMETER_VALUE, "target", "a size");
+        return;
+    }
+
+    trace_balloon_event(balloon_opaque, target);
+    nballoon_event_fn(balloon_opaque, target, node);
 }
