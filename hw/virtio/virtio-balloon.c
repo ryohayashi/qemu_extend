@@ -647,14 +647,14 @@ static size_t virtio_balloon_config_new_size(VirtIOBalloon *s)
 
 static void virtio_balloon_get_config(VirtIODevice *vdev, uint8_t *config_data)
 {
-    monitor_printf("Start of virtio_balloon_get_config\n");
+    printf("Start of virtio_balloon_get_config\n");
     VirtIOBalloon *dev = VIRTIO_BALLOON(vdev);
     struct virtio_balloon_config_new config = {};
     int node;
     for (node = 0; node < MAX_NODES_EX; node++){
         config.num_pages[node] = cpu_to_le32(dev->num_pages[node]);
         config.actual[node] = cpu_to_le32(dev->actual[node]);
-        monitor_printf("config.num_pages[%"PRId32"]: %"PRId32", config.actual[%"PRId32"]: %"PRId32"\n", config.num_pages[node], node, config.actual[node], node);
+        //printf("config.num_pages[%"PRId32"]: %"PRId32", config.actual[%"PRId32"]: %"PRId32"\n", config.num_pages[node], node, config.actual[node], node);
     }
     if (dev->free_page_report_status == FREE_PAGE_REPORT_S_REQUESTED) {
         config.free_page_report_cmd_id =
@@ -669,7 +669,7 @@ static void virtio_balloon_get_config(VirtIODevice *vdev, uint8_t *config_data)
     for (node = 0; node < MAX_NODES_EX; node++) \
         trace_virtio_balloon_get_config(config.num_pages[node], config.actual[node]);
     memcpy(config_data, &config, virtio_balloon_config_new_size(dev));
-    monitor_printf("End of virtio_balloon_get_config\n");
+    printf("End of virtio_balloon_get_config\n");
 }
 
 static int build_dimm_list(Object *obj, void *opaque)
@@ -715,7 +715,7 @@ static ram_addr_t get_current_ram_size(int node)
 static void virtio_balloon_set_config(VirtIODevice *vdev,
                                       const uint8_t *config_data)
 {
-    monitor_printf("Start of virtio_balloon_set_config\n");
+    printf("Start of virtio_balloon_set_config\n");
     VirtIOBalloon *dev = VIRTIO_BALLOON(vdev);
     struct virtio_balloon_config_new config;
     int node;
@@ -731,7 +731,7 @@ static void virtio_balloon_set_config(VirtIODevice *vdev,
         }
         trace_virtio_balloon_set_config(dev->actual[node], oldactual[node]);
     }
-    monitor_printf("End of virtio_balloon_set_config\n");
+    printf("End of virtio_balloon_set_config\n");
 }
 
 static uint64_t virtio_balloon_get_features(VirtIODevice *vdev, uint64_t f,
