@@ -121,7 +121,7 @@ NBalloonInfo *qmp_query_nballoon(Error **errp)
         return NULL;
     }
     //TODO: Might not work. how to specify array size?
-    info = g_malloc0(sizeof(*NBalloonInfo));
+    info = g_malloc0(sizeof(NBalloonInfo));
     nballoon_stat_fn(balloon_opaque, info);
     return info;
 }

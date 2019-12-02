@@ -762,7 +762,7 @@ static void virtio_nballoon_stat(void *opaque, NBalloonInfo *info)
     int node;
     //get_current_ram_size: total ram size of VM. dev->actual: ballooned ram size.
     for(node = MAX_NODES_EX - 1; node >= 0; node--){
-        entry = g_malloc0(sizeof(*intList));
+        entry = g_malloc0(sizeof(intList));
         entry->value = get_current_ram_size(node) - ((uint64_t) dev->actual[node] <<
                                              VIRTIO_BALLOON_PFN_SHIFT);
         entry->next = list;
