@@ -143,7 +143,7 @@ void qmp_balloon(int64_t target, Error **errp)
 }
 
 
-void qmp_nballoon(int64_t target, int64_t node, Error **errp)
+void qmp_nballoon(int64_t target, int32_t node, Error **errp)
 {
     if (!have_balloon(errp)) {
         return;

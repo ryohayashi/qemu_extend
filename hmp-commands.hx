@@ -1508,7 +1508,7 @@ ETEXI
 
     {
         .name       = "nballoon",
-        .args_type  = "value:M, node:M",
+        .args_type  = "value:M,node:i",
         .params     = "target node",
         .help       = "request VM to change its memory allocation (in MB)",
         .cmd        = hmp_nballoon,

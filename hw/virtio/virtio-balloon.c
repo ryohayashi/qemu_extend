@@ -711,7 +711,6 @@ static ram_addr_t get_current_ram_size(int node)
     return size;
 }
 
-
 static void virtio_balloon_set_config(VirtIODevice *vdev,
                                       const uint8_t *config_data)
 {
