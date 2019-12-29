@@ -53,7 +53,7 @@ struct virtio_balloon_config {
 	uint32_t poison_val;
 };
 
-#define MAX_NODES_EX 8
+#define MAX_NODES_EX 2
 struct virtio_balloon_config_new {
 	/* Number of pages host wants Guest to give up. */
 	uint32_t num_pages[MAX_NODES_EX];
