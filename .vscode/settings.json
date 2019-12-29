@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "virtio-bus.h": "c",
+        "virtio-balloon.h": "c",
+        "numa.h": "c",
+        "numaif.h": "c"
+    }
+}
